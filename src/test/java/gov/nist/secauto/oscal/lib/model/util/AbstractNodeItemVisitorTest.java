@@ -8,8 +8,6 @@ package gov.nist.secauto.oscal.lib.model.util;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 import java.io.IOException;
-import java.net.URI;
-import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Collection;
 import java.util.Comparator;
@@ -25,7 +23,11 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import edu.umd.cs.findbugs.annotations.NonNull;
+import gov.nist.secauto.metaschema.core.metapath.DynamicContext;
+import gov.nist.secauto.metaschema.core.metapath.StaticContext;
 import gov.nist.secauto.metaschema.core.metapath.item.node.IDefinitionNodeItem;
+import gov.nist.secauto.metaschema.core.metapath.item.node.IModuleNodeItem;
+import gov.nist.secauto.metaschema.core.metapath.item.node.INodeItemFactory;
 import gov.nist.secauto.metaschema.core.model.MetaschemaException;
 import gov.nist.secauto.metaschema.core.model.constraint.ExternalConstraintsModulePostProcessor;
 import gov.nist.secauto.metaschema.core.model.constraint.IAllowedValue;
@@ -89,8 +91,13 @@ class AbstractNodeItemVisitorTest {
         ExternalConstraintsModulePostProcessor postProcessor = new ExternalConstraintsModulePostProcessor(constraintSet);
         ModuleLoader loader = new ModuleLoader(CollectionUtil.singletonList(postProcessor));
         IXmlMetaschemaModule module = loader.load(ObjectUtils.notNull(Paths.get("src/test/resources/content/computer-example.xml").toUri()));
+        IModuleNodeItem moduleItem = INodeItemFactory.instance().newModuleNodeItem(module);
+        StaticContext staticContext = StaticContext.builder()
+                .defaultModelNamespace(module.getXmlNamespace())
+                .build();
+        DynamicContext dynamicContext = new DynamicContext(staticContext);
         AllowedValueCollectingNodeItemVisitor walker = new AllowedValueCollectingNodeItemVisitor();
-        walker.visit(module);
+        walker.visit(moduleItem, dynamicContext);
         Collection<NodeItemRecord> allowedValuesByTarget = ObjectUtils.notNull(walker.getAllowedValueLocations());
         assertEquals(1, allowedValuesByTarget.size());
   }
