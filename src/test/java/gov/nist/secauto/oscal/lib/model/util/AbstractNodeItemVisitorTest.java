@@ -5,18 +5,13 @@
 
 package gov.nist.secauto.oscal.lib.model.util;
 
-import gov.nist.secauto.metaschema.core.metapath.item.node.IDefinitionNodeItem;
-import gov.nist.secauto.metaschema.core.model.constraint.IAllowedValue;
-import gov.nist.secauto.metaschema.core.model.constraint.IAllowedValuesConstraint;
-import gov.nist.secauto.metaschema.core.util.ObjectUtils;
-import gov.nist.secauto.metaschema.databind.model.IBoundModule;
-import gov.nist.secauto.oscal.lib.OscalBindingContext;
-import gov.nist.secauto.oscal.lib.model.OscalCompleteModule;
-import gov.nist.secauto.oscal.lib.model.util.AllowedValueCollectingNodeItemVisitor.AllowedValuesRecord;
+import static org.junit.jupiter.api.Assertions.assertEquals;
 
-import org.junit.jupiter.api.Disabled;
-import org.junit.jupiter.api.Test;
-
+import java.io.IOException;
+import java.net.URI;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.util.Collection;
 import java.util.Comparator;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -26,7 +21,26 @@ import java.util.TreeMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+import org.junit.jupiter.api.Disabled;
+import org.junit.jupiter.api.Test;
+
 import edu.umd.cs.findbugs.annotations.NonNull;
+import gov.nist.secauto.metaschema.core.metapath.item.node.IDefinitionNodeItem;
+import gov.nist.secauto.metaschema.core.model.MetaschemaException;
+import gov.nist.secauto.metaschema.core.model.constraint.ExternalConstraintsModulePostProcessor;
+import gov.nist.secauto.metaschema.core.model.constraint.IAllowedValue;
+import gov.nist.secauto.metaschema.core.model.constraint.IAllowedValuesConstraint;
+import gov.nist.secauto.metaschema.core.model.constraint.IConstraintSet;
+import gov.nist.secauto.metaschema.core.model.xml.IXmlMetaschemaModule;
+import gov.nist.secauto.metaschema.core.model.xml.ModuleLoader;
+import gov.nist.secauto.metaschema.core.model.xml.XmlMetaConstraintLoader;
+import gov.nist.secauto.metaschema.core.util.CollectionUtil;
+import gov.nist.secauto.metaschema.core.util.ObjectUtils;
+import gov.nist.secauto.metaschema.databind.model.IBoundModule;
+import gov.nist.secauto.oscal.lib.OscalBindingContext;
+import gov.nist.secauto.oscal.lib.model.OscalCompleteModule;
+import gov.nist.secauto.oscal.lib.model.util.AllowedValueCollectingNodeItemVisitor.AllowedValuesRecord;
+import gov.nist.secauto.oscal.lib.model.util.AllowedValueCollectingNodeItemVisitor.NodeItemRecord;
 
 class AbstractNodeItemVisitorTest {
 
@@ -67,6 +81,18 @@ class AbstractNodeItemVisitorTest {
             // System.out.println(" source: " + constraint.getSource());
           });
         });
+  }
+  
+  @Test
+  void testAllowedValuesMissingVariableBindings() throws MetaschemaException, IOException {
+	    List<IConstraintSet> constraintSet = new XmlMetaConstraintLoader().load(ObjectUtils.requireNonNull(ObjectUtils.notNull(Paths.get("src/test/resources/content/computer-metaschema-meta-constraints.xml").toUri())));
+        ExternalConstraintsModulePostProcessor postProcessor = new ExternalConstraintsModulePostProcessor(constraintSet);
+        ModuleLoader loader = new ModuleLoader(CollectionUtil.singletonList(postProcessor));
+        IXmlMetaschemaModule module = loader.load(ObjectUtils.notNull(Paths.get("src/test/resources/content/computer-example.xml").toUri()));
+        AllowedValueCollectingNodeItemVisitor walker = new AllowedValueCollectingNodeItemVisitor();
+        walker.visit(module);
+        Collection<NodeItemRecord> allowedValuesByTarget = ObjectUtils.notNull(walker.getAllowedValueLocations());
+        assertEquals(1, allowedValuesByTarget.size());
   }
 
   private static String metapath(@NonNull IDefinitionNodeItem<?, ?> item) {
